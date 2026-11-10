@@ -23,6 +23,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdlib.h>
+#include <stdio.h>         // Para sprintf()
+#include "ssd1306.h"       // Librería OLED principal
+#include "ssd1306_fonts.h" // Fuentes de texto OLED
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -135,7 +138,19 @@ void StartDisplayTask(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+const char* ObtenerNombreNota(uint16_t freq) {
+    switch(freq) {
+        case 262: return "Do4 "; case 277: return "Do4#";
+        case 294: return "Re4 "; case 311: return "Re4#";
+        case 330: return "Mi4 "; case 349: return "Fa4 ";
+        case 370: return "Fa4#"; case 392: return "Sol4";
+        case 415: return "Sol4#"; case 440: return "La4 ";
+        case 466: return "La4#"; case 494: return "Si4 ";
+        case 523: return "Do5 "; case 554: return "Do5#";
+        case 587: return "Re5 "; case 622: return "Re5#";
+        default:  return "----";
+    }
+}
 /* USER CODE END 0 */
 
 /**
@@ -173,7 +188,18 @@ int main(void)
   MX_TIM6_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
+  // 1. Inicializa el controlador de la pantalla
+  ssd1306_Init();
 
+  // 2. Limpia cualquier residuo visual poniendo todo en negro
+  ssd1306_Fill(Black);
+
+  // 3. Posiciona el cursor (X, Y) y escribe el texto
+  ssd1306_SetCursor(10, 25);
+  ssd1306_WriteString("Prueba OLED", Font_11x18, White);
+
+  // 4. Envía la orden física por I2C para que los pixeles enciendan
+  ssd1306_UpdateScreen();
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -664,17 +690,42 @@ void StartDisplayTask(void *argument)
   /* USER CODE BEGIN StartDisplayTask */
   /* Infinite loop */
 	ControlMsg_t dMsg = {0, 0};
+	  char buffer_pantalla[32];
+
+	  // Pantalla de bienvenida al encender
+	  ssd1306_Fill(Black);
+	  ssd1306_SetCursor(10, 25);
+	  ssd1306_WriteString("SynthRTOS", Font_11x18, White);
+	  ssd1306_UpdateScreen();
+
 	  for(;;) {
+	      // Espera (sin gastar CPU) hasta que presionas/sueltas una tecla o mueves el potenciómetro
 	      if (osMessageQueueGet(displayQueueHandle, &dMsg, NULL, portMAX_DELAY) == osOK) {
+
+	          ssd1306_Fill(Black); // Limpia el fotograma anterior
+
 	          if (dMsg.freq > 0) {
-	              ITM_SendChar('P'); // Play
+	              // 1. Mostrar Nota
+	              ssd1306_SetCursor(10, 10);
+	              ssd1306_WriteString("Nota: ", Font_11x18, White);
+	              ssd1306_WriteString((char*)ObtenerNombreNota(dMsg.freq), Font_11x18, White);
+
+	              // 2. Mostrar Frecuencia
+	              snprintf(buffer_pantalla, sizeof(buffer_pantalla), "Freq: %d Hz", dMsg.freq);
+	              ssd1306_SetCursor(10, 35);
+	              ssd1306_WriteString(buffer_pantalla, Font_7x10, White);
+
+	              // 3. Mostrar Volumen
+	              snprintf(buffer_pantalla, sizeof(buffer_pantalla), "Vol: %d %%", dMsg.volume);
+	              ssd1306_SetCursor(10, 50);
+	              ssd1306_WriteString(buffer_pantalla, Font_7x10, White);
 	          } else {
-	              ITM_SendChar('I'); // Idle
+	              // Al soltar la tecla
+	              ssd1306_SetCursor(20, 25);
+	              ssd1306_WriteString("Silencio...", Font_11x18, White);
 	          }
 
-	          // Aquí puedes agregar la lógica I2C OLED
-	          // ssd1306_SetCursor(0,0);
-	          // ssd1306_WriteString("Vol: ", ...);
+	          ssd1306_UpdateScreen(); // Envía los datos físicos por I2C
 	      }
 	  }
   /* USER CODE END StartDisplayTask */
