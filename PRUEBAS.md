@@ -5,7 +5,7 @@ El reto exige pruebas reproducibles y evidencia de funcionamiento.
 ## 1. Registro de pruebas
 
 | ID | Prueba | Procedimiento | Resultado  |
-|---|---|---|---|---|
+|---|---|---|---|
 | P01 | Arranque | Programar y energizar el STM32. | El scheduler inicia sin entrar en `Error_Handler`. |
 | P02 | Reposo | No pulsar ninguna tecla. | `freq = 0`; DAC permanece en punto medio y `DisplayTask` puede reportar `I`. | 
 | P03 | Teclado | Pulsar teclas de distintas filas/columnas. | Cambia la frecuencia de salida según `note_frequencies`. | 
